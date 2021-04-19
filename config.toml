@@ -1,0 +1,7 @@
+Endpoint = "wss://bsc-ws-node.nariox.org:443"
+
+ContractAddresses = [
+    "ETH:0x6f817a0ce8f7640add3bc0c1c2298635043c2423"
+]
+
+Server = "http://127.0.0.1:20717/rpc"
