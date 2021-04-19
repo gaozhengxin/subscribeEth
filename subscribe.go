@@ -32,7 +32,7 @@ var s struct {
 var configFile string
 
 var SwapoutTopic common.Hash = common.HexToHash("0x628d6cba")
-var BTCSwapoutTopic common.Hash = common.HexToHash("0x628d6cba")
+var BTCSwapoutTopic common.Hash = common.HexToHash("0xad54056d")
 
 func init() {
 	flag.StringVar(&configFile, "config", "./config.toml", "config")
