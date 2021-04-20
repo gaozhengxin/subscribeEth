@@ -76,8 +76,7 @@ func main() {
 
 	fq := ethereum.FilterQuery{
 		Addresses: addresses,
-		//Topics:    topics,
-		Topics: nil,
+		Topics:    topics,
 	}
 
 	log.Info("fq", "fq", fq)
@@ -102,10 +101,10 @@ func main() {
 				txhash := msg.TxHash.String()
 				pairID := addressesMap[msg.Address]
 				fmt.Printf("txhash: %v, pairID: %v\n", txhash, pairID)
-				//swaperr := DoSwapout(txhash, pairID, config.Server)
-				//if swaperr != nil {
-				//	log.Warn("Do swapout error", "error", swaperr)
-				//}
+				swaperr := DoSwapout(txhash, pairID, config.Server)
+				if swaperr != nil {
+					log.Warn("Do swapout error", "error", swaperr)
+				}
 			case err := <-sub.Err():
 				log.Info("Subscribe error", "error", err)
 				sub.Unsubscribe()
