@@ -175,6 +175,6 @@ func DoSwapout(txid, pairID string, server string) error {
 	if err != nil {
 		return err
 	}
-	log.Info("Call swap server", "%s", bodyText)
+	log.Info("Call swap server", "response", fmt.Sprintf("%s", bodyText))
 	return nil
 }
