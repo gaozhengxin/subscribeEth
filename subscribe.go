@@ -160,7 +160,7 @@ func LoopSubscribe(client *ethclient.Client, ctx context.Context, fq ethereum.Fi
 
 func DoSwapout(txid, pairID string, server string) error {
 	client := &http.Client{}
-	var data = strings.NewReader(fmt.Sprintf(`{"jsonrpc":"2.0","method":"swap.Swapout","params":[{"txid":%v,"pairid":%v}],"id":1}`, txid, pairID))
+	var data = strings.NewReader(fmt.Sprintf(`{"jsonrpc":"2.0","method":"swap.Swapout","params":[{"txid":"%v","pairid":"%v"}],"id":1}`, txid, pairID))
 	req, err := http.NewRequest("POST", server, data)
 	if err != nil {
 		return err
