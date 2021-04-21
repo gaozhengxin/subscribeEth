@@ -58,6 +58,7 @@ func main() {
 
 	// 合约地址
 	var addressesMap = make(map[common.Address]string)
+	var serverMap = make(map[common.Address]string)
 	var addresses = make([]common.Address, 0)
 
 	var endpoint string =  config.Endpoint
@@ -67,10 +68,12 @@ func main() {
 	topics = append(topics, []common.Hash{SwapoutTopic, BTCSwapoutTopic}) // SwapoutTopic or BTCSwapoutTopic
 
 	for _, item := range config.ContractAddresses {
-		pairID := strings.Split(item, ":")[0]
-		addr := common.HexToAddress(strings.Split(item, ":")[1])
+		pairID := strings.Split(item, ",")[0]
+		addr := common.HexToAddress(strings.Split(item, ",")[1])
+		server := strings.Split(item, ",")[2]
 
 		addressesMap[addr] = pairID
+		serverMap[addr] = server
 		addresses = append(addresses, addr)
 	}
 
@@ -101,7 +104,8 @@ func main() {
 				txhash := msg.TxHash.String()
 				pairID := addressesMap[msg.Address]
 				fmt.Printf("txhash: %v, pairID: %v\n", txhash, pairID)
-				swaperr := DoSwapout(txhash, pairID, config.Server)
+				server := serverMap[msg.Address]
+				swaperr := DoSwapout(txhash, pairID, server)
 				if swaperr != nil {
 					log.Warn("Do swapout error", "error", swaperr)
 				}
