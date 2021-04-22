@@ -1,8 +1,13 @@
 Endpoint = "wss://bsc-ws-node.nariox.org:443"
 
-ContractAddresses = [
+SwapoutTokens = [
     "ETH,0x6f817a0ce8f7640add3bc0c1c2298635043c2423,http://8.129.109.187:20717/rpc",
     "bBADGERv3,0x1F7216fdB338247512Ec99715587bb97BBf96eae,http://8.129.109.187:20717/rpc",
     "ICEv3,0xf16e81dce15B08F326220742020379B855B87DF9,http://8.129.109.187:20717/rpc",
     "USDTv3,0x049d68029688eabf473097a2fc38ef61633a3c7a,http://8.129.109.187:20717/rpc"
+]
+
+SwapinTokens = [
+    "FANTOM,,<fantom deposit address>,http://8.129.109.187:20717/rpc",
+    "FUSDT,<fusdt token address>,<fusdt deposit address>,http://8.129.109.187:20717/rpc",
 ]
