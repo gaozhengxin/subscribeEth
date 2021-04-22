@@ -192,6 +192,8 @@ func StartSubscribeSwapin(config *Config) {
 			topics = append(topics, []common.Hash{ERC20TransferTopic})       // Log [0] is ERC20 transfer
 			topics = append(topics, []common.Hash{})                         // Log [1] is arbitrary
 			topics = append(topics, []common.Hash{depositAddr.Hash()}) // Log [2] is deposit address
+		} else {
+			tokens = append(tokens, depositAddr)
 		}
 
 		fq := ethereum.FilterQuery{
