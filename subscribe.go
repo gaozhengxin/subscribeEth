@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 	//"math/big"
@@ -33,6 +34,7 @@ var s struct {
 }
 
 var configFile string
+var verbosity int
 
 var (
 	SwapoutTopic       common.Hash = common.HexToHash("0x6b616089d04950dc06c45c6dd787d657980543f89651aec47924752c7d16c888")
@@ -41,8 +43,8 @@ var (
 )
 
 func init() {
-	log.Root().SetHandler(log.StdoutHandler)
 	flag.StringVar(&configFile, "config", "./config.toml", "config")
+	flag.IntVar(&verbosity, "verbosity", 3, "verbosity")
 }
 
 func LoadConfig() *Config {
@@ -56,6 +58,10 @@ func LoadConfig() *Config {
 
 func main() {
 	flag.Parse()
+
+	glogger := log.NewGlogHandler(log.StreamHandler(os.Stdout, log.TerminalFormat(false)))
+	glogger.Verbosity(log.Lvl(verbosity))
+	log.Root().SetHandler(glogger)
 
 	config := LoadConfig()
 
@@ -172,7 +178,7 @@ func StartSubscribeSwapin(config *Config) {
 		tokenAddr := common.HexToAddress(strings.Split(item, ",")[1])
 		depositAddr := common.HexToAddress(strings.Split(item, ",")[2])
 		server := strings.Split(item, ",")[3]
-	
+
 		if tokenAddr == (common.Address{}) {
 			ETHDepositAddress = depositAddr
 		}
@@ -189,8 +195,8 @@ func StartSubscribeSwapin(config *Config) {
 	for depositAddr, tokens := range depositAddressMap {
 		topics := make([][]common.Hash, 0)
 		if depositAddr != ETHDepositAddress {
-			topics = append(topics, []common.Hash{ERC20TransferTopic})       // Log [0] is ERC20 transfer
-			topics = append(topics, []common.Hash{})                         // Log [1] is arbitrary
+			topics = append(topics, []common.Hash{ERC20TransferTopic}) // Log [0] is ERC20 transfer
+			topics = append(topics, []common.Hash{})                   // Log [1] is arbitrary
 			topics = append(topics, []common.Hash{depositAddr.Hash()}) // Log [2] is deposit address
 		} else {
 			tokens = append(tokens, depositAddr)
