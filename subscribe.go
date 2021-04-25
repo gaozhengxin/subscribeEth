@@ -5,11 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 	"os"
 	"strings"
 	"time"
-	//"math/big"
 
 	"github.com/BurntSushi/toml"
 
@@ -33,6 +33,8 @@ var s struct {
 	}
 }
 
+var start int64
+var end int64
 var configFile string
 var verbosity int
 
@@ -43,6 +45,8 @@ var (
 )
 
 func init() {
+	flag.Int64Var(&start, "start", 0, "start")
+	flag.Int64Var(&end, "end", 0, "end")
 	flag.StringVar(&configFile, "config", "./config.toml", "config")
 	flag.IntVar(&verbosity, "verbosity", 3, "verbosity")
 }
@@ -130,6 +134,13 @@ func StartSubscribeSwapout(config *Config) {
 		Topics:    topics,
 	}
 
+	if start > 0 {
+		swapoutfq.FromBlock = big.NewInt(start)
+	}
+	if end > 0 {
+		swapoutfq.ToBlock = big.NewInt(end)
+	}
+
 	log.Info("swapout fq", "swapoutfq", swapoutfq)
 
 	ch := make(chan types.Log, 128)
@@ -206,6 +217,12 @@ func StartSubscribeSwapin(config *Config) {
 			Addresses: tokens,
 			Topics:    topics,
 		}
+		if start > 0 {
+			fq.FromBlock = big.NewInt(start)
+		}
+		if end > 0 {
+			fq.ToBlock = big.NewInt(end)
+		}
 		log.Info("swapin fq", "depositAddr", fq)
 
 		go func() {
@@ -265,19 +282,22 @@ func DoSwapout(txid, pairID string, server string) error {
 	var data = strings.NewReader(fmt.Sprintf(`{"jsonrpc":"2.0","method":"swap.Swapout","params":[{"txid":"%v","pairid":"%v"}],"id":1}`, txid, pairID))
 	req, err := http.NewRequest("POST", server, data)
 	if err != nil {
+		log.Warn("Post swapout error", "txid", txid, "pairID", pairID, "server", server, "error", err)
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Warn("Post swapout error", "txid", txid, "pairID", pairID, "server", server, "error", err)
 		return err
 	}
 	defer resp.Body.Close()
 	bodyText, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		log.Warn("Post swapout error", "txid", txid, "pairID", pairID, "server", server, "error", err)
 		return err
 	}
-	log.Info("Call swap server", "response", fmt.Sprintf("%s", bodyText))
+	log.Info("Call swapout server", "response", fmt.Sprintf("%s", bodyText), "txid", txid, "pairID", pairID, "server", server)
 	return nil
 }
 
@@ -286,18 +306,21 @@ func DoSwapin(txid, pairID string, server string) error {
 	var data = strings.NewReader(fmt.Sprintf(`{"jsonrpc":"2.0","method":"swap.Swapin","params":[{"txid":"%v","pairid":"%v"}],"id":2}`, txid, pairID))
 	req, err := http.NewRequest("POST", server, data)
 	if err != nil {
+		log.Warn("Post swapin error", "txid", txid, "pairID", pairID, "server", server, "error", err)
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Warn("Post swapin error", "txid", txid, "pairID", pairID, "server", server, "error", err)
 		return err
 	}
 	defer resp.Body.Close()
 	bodyText, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		log.Warn("Post swapin error", "txid", txid, "pairID", pairID, "server", server, "error", err)
 		return err
 	}
-	log.Info("Call swap server", "response", fmt.Sprintf("%s", bodyText))
+	log.Info("Call swapin server", "response", fmt.Sprintf("%s", bodyText), "txid", txid, "pairID", pairID, "server", server)
 	return nil
 }
