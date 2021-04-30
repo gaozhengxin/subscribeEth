@@ -37,6 +37,7 @@ var start int64
 var end int64
 var configFile string
 var verbosity int
+var logfilepath string
 
 var (
 	SwapoutTopic       common.Hash = common.HexToHash("0x6b616089d04950dc06c45c6dd787d657980543f89651aec47924752c7d16c888")
@@ -48,6 +49,7 @@ func init() {
 	flag.Int64Var(&start, "start", 0, "start")
 	flag.Int64Var(&end, "end", 0, "end")
 	flag.StringVar(&configFile, "config", "./config.toml", "config")
+	flag.StringVar(&logfilepath, "out", "./subscribe.log", "out")
 	flag.IntVar(&verbosity, "verbosity", 3, "verbosity")
 }
 
@@ -63,9 +65,19 @@ func LoadConfig() *Config {
 func main() {
 	flag.Parse()
 
-	glogger := log.NewGlogHandler(log.StreamHandler(os.Stdout, log.TerminalFormat(false)))
-	glogger.Verbosity(log.Lvl(verbosity))
-	log.Root().SetHandler(glogger)
+	if logfilepath != "" {
+		handler, err := log.FileHandler(logfilepath, log.JSONFormatEx(true, true))
+		if err != nil {
+			panic(err)
+		}
+		glogger := log.NewGlogHandler(handler)
+		glogger.Verbosity(log.Lvl(verbosity))
+		log.Root().SetHandler(glogger)
+	} else {
+		glogger := log.NewGlogHandler(log.StreamHandler(os.Stdout, log.TerminalFormat(false)))
+		glogger.Verbosity(log.Lvl(verbosity))
+		log.Root().SetHandler(glogger)
+	}
 
 	config := LoadConfig()
 
@@ -156,7 +168,7 @@ func StartSubscribeSwapout(config *Config) {
 			log.Info("Find event", "event", msg)
 			txhash := msg.TxHash.String()
 			pairID := addreeePairIDMap[msg.Address]
-			fmt.Printf("txhash: %v, pairID: %v\n", txhash, pairID)
+			log.Info("Swapout", "txhash", txhash, "pairID", pairID)
 			server := serverMap[msg.Address]
 			swaperr := DoSwapout(txhash, pairID, server)
 			if swaperr != nil {
@@ -202,16 +214,47 @@ func StartSubscribeSwapin(config *Config) {
 		depositAddressMap[depositAddr] = append(depositAddressMap[depositAddr], tokenAddr)
 	}
 
+	// subscribe ETH swapin
+	fq := ethereum.FilterQuery{
+		Addresses: []common.Address{ETHDepositAddress},
+	}
+
+	go func() {
+		ch := make(chan types.Log, 128)
+		defer close(ch)
+
+		sub := LoopSubscribe(client, ctx, fq, ch)
+		defer sub.Unsubscribe()
+
+		for {
+			select {
+			case msg := <-ch:
+				log.Info("Find event", "event", msg)
+				tx, _, err := client.TransactionByHash(ctx, msg.TxHash)
+				if err == nil && *tx.To() == ETHDepositAddress {
+					txhash := msg.TxHash.String()
+					pairID := addreeePairIDMap[common.Address{}]
+					log.Info("ETH swap in", "txhash", txhash, "pairID", pairID)
+					server := serverMap[msg.Address]
+					swaperr := DoSwapin(txhash, pairID, server)
+					if swaperr != nil {
+						log.Warn("Do swapout error", "error", swaperr)
+					}
+				}
+			case err := <-sub.Err():
+				log.Info("Subscribe error", "error", err)
+				sub.Unsubscribe()
+				sub = LoopSubscribe(client, ctx, fq, ch)
+			}
+		}
+	}()
+
 	// subscribe ERC20 swapin
 	for depositAddr, tokens := range depositAddressMap {
 		topics := make([][]common.Hash, 0)
-		if depositAddr != ETHDepositAddress {
-			topics = append(topics, []common.Hash{ERC20TransferTopic}) // Log [0] is ERC20 transfer
-			topics = append(topics, []common.Hash{})                   // Log [1] is arbitrary
-			topics = append(topics, []common.Hash{depositAddr.Hash()}) // Log [2] is deposit address
-		} else {
-			tokens = append(tokens, depositAddr)
-		}
+		topics = append(topics, []common.Hash{ERC20TransferTopic}) // Log [0] is ERC20 transfer
+		topics = append(topics, []common.Hash{})                   // Log [1] is arbitrary
+		topics = append(topics, []common.Hash{depositAddr.Hash()}) // Log [2] is deposit address
 
 		fq := ethereum.FilterQuery{
 			Addresses: tokens,
@@ -238,7 +281,7 @@ func StartSubscribeSwapin(config *Config) {
 					log.Info("Find event", "event", msg)
 					txhash := msg.TxHash.String()
 					pairID := addreeePairIDMap[msg.Address]
-					fmt.Printf("txhash: %v, pairID: %v\n", txhash, pairID)
+					log.Info("ERC20 swap in", "txhash", txhash, "pairID", pairID)
 					server := serverMap[msg.Address]
 					swaperr := DoSwapin(txhash, pairID, server)
 					if swaperr != nil {
