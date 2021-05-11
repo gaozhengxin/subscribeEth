@@ -38,6 +38,8 @@ var end int64
 var configFile string
 var verbosity int
 var logfilepath string
+var swapin bool
+var swapout bool
 
 var (
 	SwapoutTopic       common.Hash = common.HexToHash("0x6b616089d04950dc06c45c6dd787d657980543f89651aec47924752c7d16c888")
@@ -50,6 +52,8 @@ func init() {
 	flag.Int64Var(&end, "end", 0, "end")
 	flag.StringVar(&configFile, "config", "./config.toml", "config")
 	flag.StringVar(&logfilepath, "out", "./subscribe.log", "out")
+	flag.BoolVar(&swapin, "swapin", false, "listen swapin")
+	flag.BoolVar(&swapout, "swapout", false, "listen swapout")
 	flag.IntVar(&verbosity, "verbosity", 3, "verbosity")
 }
 
@@ -81,11 +85,19 @@ func main() {
 
 	config := LoadConfig()
 
-	go StartSubscribeHeader(config)
-	go StartSubscribeSwapout(config)
-	go StartSubscribeSwapin(config)
+	if swapin || swapout {
+		go StartSubscribeHeader(config)
 
-	select {}
+		if swapout {
+			go StartSubscribeSwapout(config)
+		}
+		if swapin {
+			go StartSubscribeSwapin(config)
+		}
+		select {}
+	}
+	fmt.Println("Exit")
+
 }
 
 func StartSubscribeHeader(config *Config) {
@@ -116,6 +128,7 @@ func StartSubscribeHeader(config *Config) {
 }
 
 func StartSubscribeSwapout(config *Config) {
+	log.Info("StartSubscribeSwapout")
 	var endpoint string = config.Endpoint
 
 	ctx := context.Background()
@@ -183,6 +196,7 @@ func StartSubscribeSwapout(config *Config) {
 }
 
 func StartSubscribeSwapin(config *Config) {
+	log.Info("StartSubscribeSwapin")
 	var endpoint string = config.Endpoint
 
 	ctx := context.Background()
